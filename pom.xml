@@ -44,15 +44,16 @@
         <module>common</module>
         <module>core</module>
         <module>transformer</module>
+        <module>hivereader</module>
 
         <!-- reader -->
+
         <module>mysqlreader</module>
         <module>drdsreader</module>
         <module>sqlserverreader</module>
         <module>postgresqlreader</module>
         <module>oraclereader</module>
         <module>odpsreader</module>
-        <module>hivereader</module>
         <module>otsreader</module>
         <module>otsstreamreader</module>
         <module>txtfilereader</module>
@@ -70,13 +71,13 @@
         <module>gdbreader</module>
 
         <!-- writer -->
+        <module>streamwriter</module>
         <module>mysqlwriter</module>
         <module>drdswriter</module>
         <module>odpswriter</module>
         <module>txtfilewriter</module>
         <module>ftpwriter</module>
         <module>hdfswriter</module>
-        <module>streamwriter</module>
         <module>otswriter</module>
         <module>oraclewriter</module>
         <module>sqlserverwriter</module>
@@ -88,21 +89,27 @@
         <module>rdbmswriter</module>
         <module>hbase11xwriter</module>
         <module>hbase094xwriter</module>
+	<!--	
         <module>hbase11xsqlwriter</module>
         <module>hbase11xsqlreader</module>
+	-->
         <module>elasticsearchwriter</module>
         <module>tsdbwriter</module>
         <module>adbpgwriter</module>
         <module>gdbwriter</module>
         <module>cassandrawriter</module>
+	<!--
         <module>clickhousewriter</module>
+	-->
         <!-- common support module -->
-        <module>plugin-rdbms-util</module>
-        <module>plugin-unstructured-storage-util</module>
         <module>hbase20xsqlreader</module>
         <module>hbase20xsqlwriter</module>
+        <module>plugin-rdbms-util</module>
+        <module>plugin-unstructured-storage-util</module>
         <module>rediswriter</module>
+	<!--
         <module>kuduwriter</module>
+		-->
     </modules>
 
     <dependencyManagement>
@@ -182,6 +189,16 @@
     </dependencyManagement>
 
     <repositories>
+
+        <repository>
+            <id>bigdata</id>
+            <url>http://10.24.68.241:8081/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>cloudera</id>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+        </repository>
+
         <repository>
             <id>central</id>
             <name>Nexus aliyun</name>
