@@ -87,6 +87,7 @@ public class HbaseSQLHelper {
         List<Configuration> resultConfigurations = new ArrayList<Configuration>();
         List<InputSplit> rawSplits = null;
         try {
+            LOG.info("configuration: " + jobContext.getConfiguration());
             rawSplits = inputFormat.getSplits(jobContext);
             LOG.info("split size is " + rawSplits.size());
             for (InputSplit split : rawSplits) {
