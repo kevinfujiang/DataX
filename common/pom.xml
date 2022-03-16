@@ -58,6 +58,11 @@
             <artifactId>commons-math3</artifactId>
             <version>3.1.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.anarres.lzo</groupId>
+            <artifactId>lzo-core</artifactId>
+            <version>1.0.6</version>
+        </dependency>
     </dependencies>
 
     <build>

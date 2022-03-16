@@ -14,10 +14,10 @@ public class HbaseSQLHelperTest {
 
     private String jsonStr = "{\n" +
             "        \"hbaseConfig\": {\n" +
-            "            \"hbase.zookeeper.quorum\": \"hb-proxy-pub-xxx-001.hbase.rds.aliyuncs.com,hb-proxy-pub-xxx-002.hbase.rds.aliyuncs.com,hb-proxy-pub-xxx-003.hbase.rds.aliyuncs.com\"\n" +
+            "            \"hbase.zookeeper.quorum\": \"10.24.68.187:2181/hbase;\"\n" +
             "        },\n" +
-            "        \"table\": \"TABLE1\",\n" +
-            "        \"column\": []\n" +
+            "        \"table\": \"POC_TRADEHIS_4\",\n" +
+            "        \"column\": [\"REQUESTNO\", \"SK_CONFIRMDATE\", \"CUSTOMERID\", \"TRADETYPE\", \"PRODUCTCNNAME\", \"SHARETYPE\", \"SHARES\",\"AMOUNT\",\"NETVALUE\",\"TOTALFARE\",\"AGENCYNAME\"]\n" +
             "    }";
 
 
@@ -26,8 +26,8 @@ public class HbaseSQLHelperTest {
         Configuration config = Configuration.from(jsonStr);
         HbaseSQLReaderConfig readerConfig = HbaseSQLHelper.parseConfig(config);
         System.out.println("tablenae = " +readerConfig.getTableName() +",zk = " +readerConfig.getZkUrl());
-        assertEquals("TABLE1", readerConfig.getTableName());
-        assertEquals("hb-proxy-pub-xxx-001.hbase.rds.aliyuncs.com,hb-proxy-pub-xxx-002.hbase.rds.aliyuncs.com,hb-proxy-pub-xxx-003.hbase.rds.aliyuncs.com:2181", readerConfig.getZkUrl());
+        assertEquals("POC_TRADEHIS_4", readerConfig.getTableName());
+        assertEquals("10.24.68.187:2181", readerConfig.getZkUrl());
     }
 
     @Test

@@ -1,0 +1,35 @@
+{
+  "job": {
+    "content": [
+      {
+        "reader": {
+          "name": "kudureader",
+          "parameter": {
+            "masterAddress": "10.24.69.3:7051,10.24.69.22:7051,10.24.65.120:7051",
+            "table": "impala::kudu_demo.employees_0310",
+            "splitKey": "",
+            "lowerBound": "min",
+            "upperBound": "max",
+            "ReadTimeoutMs": 30000,
+            "scanRequestTimeout": 30000,
+            "column": [
+              "emp_no", "birth_date", "first_name","gender"
+            ]
+          }
+        },
+        "writer": {
+          "name": "streamwriter",
+          "parameter": {
+            "encoding": "UTF-8",
+            "print": true
+          }
+        }
+      }
+    ],
+    "setting": {
+      "speed": {
+        "channel": "3"
+      }
+    }
+  }
+}

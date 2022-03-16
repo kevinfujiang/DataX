@@ -139,12 +139,18 @@ public class Configuration {
 	}
 	
 	public String getUnnecessaryValue(String key,String defaultValue,ErrorCode errorCode) {
+		return getUnnecessaryValue(key, defaultValue);
+	}
+
+	public String getUnnecessaryValue(String key, String defaultValue)
+	{
 		String value = this.getString(key, defaultValue);
 		if (StringUtils.isBlank(value)) {
 			value = defaultValue;
 		}
 		return value;
 	}
+
 
     public Boolean getNecessaryBool(String key, ErrorCode errorCode) {
         Boolean value = this.getBool(key);
