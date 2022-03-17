@@ -126,30 +126,40 @@ public class UnstructuredStorageWriterUtil {
     public static List<Configuration> split(Configuration writerSliceConfig,
             Set<String> originAllFileExists, int mandatoryNumber) {
         LOG.info("begin do split...");
-        Set<String> allFileExists = new HashSet<String>();
-        allFileExists.addAll(originAllFileExists);
+        Set<String> allFileExists = new HashSet<>(originAllFileExists);
         List<Configuration> writerSplitConfigs = new ArrayList<Configuration>();
         String filePrefix = writerSliceConfig.getString(Key.FILE_NAME);
+        String suffix = writerSliceConfig.getString(Key.SUFFIX);
 
-        String fileSuffix;
         for (int i = 0; i < mandatoryNumber; i++) {
             // handle same file name
             Configuration splitedTaskConfig = writerSliceConfig.clone();
-            String fullFileName = null;
-            fileSuffix = UUID.randomUUID().toString().replace('-', '_');
-            fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
-            while (allFileExists.contains(fullFileName)) {
-                fileSuffix = UUID.randomUUID().toString().replace('-', '_');
-                fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
-            }
-            allFileExists.add(fullFileName);
-            splitedTaskConfig.set(Key.FILE_NAME, fullFileName);
+            String now = new SimpleDateFormat("yyyyMMdd").format(new Date());
+            String fullFileName = String.format("%s__%s", filePrefix, now);
+            String postFullFileName = recursionFileFullName(allFileExists, fullFileName, fullFileName, suffix, 1);
+
+            allFileExists.add(postFullFileName);
+            splitedTaskConfig.set(Key.FILE_NAME, postFullFileName);
             LOG.info(String
-                    .format("splited write file name:[%s]", fullFileName));
+                    .format("split write file name:[%s]", postFullFileName));
             writerSplitConfigs.add(splitedTaskConfig);
         }
         LOG.info("end do split.");
         return writerSplitConfigs;
+    }
+
+    private static String recursionFileFullName(Set<String> allFileExists, String preFileName, String postFileName, String suffix, int num) {
+        if (allFileExists.contains(postFileName.concat(suffix))) {
+            if (num > 1) {
+                String str = postFileName.substring(0, preFileName.length());
+                postFileName = str + "_" + num;
+            } else {
+                postFileName = postFileName + "_" + num;
+            }
+        } else {
+            return postFileName;
+        }
+        return recursionFileFullName(allFileExists, preFileName, postFileName, suffix, num + 1);
     }
 
     public static String buildFilePath(String path, String fileName,
