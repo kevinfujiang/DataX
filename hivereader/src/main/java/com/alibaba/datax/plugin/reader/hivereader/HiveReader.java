@@ -1,299 +1,242 @@
 package com.alibaba.datax.plugin.reader.hivereader;
 
-import com.alibaba.datax.common.element.*;
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.plugin.RecordSender;
-import com.alibaba.datax.common.plugin.TaskPluginCollector;
 import com.alibaba.datax.common.spi.Reader;
-import com.alibaba.datax.common.statistics.PerfRecord;
-import com.alibaba.datax.common.statistics.PerfTrace;
 import com.alibaba.datax.common.util.Configuration;
+import com.alibaba.datax.common.util.ShellUtil;
+import com.alibaba.datax.plugin.unstructuredstorage.reader.UnstructuredStorageReaderUtil;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Types;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.InputStream;
+import java.util.*;
+/**
+ * @author dean 2019/10/25.
+ * @version v1.1
+ */
+public class HiveReader {
 
-
-public class HiveReader extends Reader {
-
+	
     /**
-     * init -> prepare -> split
+     * Job 中的方法仅执行一次，Task 中方法会由框架启动多个 Task 线程并行执行。
+     * <p/>
+     * 整个 Reader 执行流程是：
+     * <pre>
+     * Job类init-->prepare-->split
+     *
+     * Task类init-->prepare-->startRead-->post-->destroy
+     * Task类init-->prepare-->startRead-->post-->destroy
+     *
+     * Job类post-->destroy
+     * </pre>
      */
-    public static class Job extends Reader.Job {
-        private static final Logger LOG = LoggerFactory.getLogger(Job.class);
-        private Configuration readerOriginConfig;
 
-        private List<String> sqls;
+    public static class Job extends Reader.Job {
+
+        private static final Logger LOG = LoggerFactory
+                .getLogger(Job.class);
+        private Configuration readerOriginConfig = null;
+
 
         @Override
         public void init() {
             LOG.info("init() begin...");
-            this.readerOriginConfig = super.getPluginJobConf();
+            this.readerOriginConfig = super.getPluginJobConf();//获取配置文件信息{parameter 里面的参数}
             this.validate();
             LOG.info("init() ok and end...");
+            LOG.info("HiveReader流程说明[1:Reader的HiveQL导入临时表(TextFile无压缩的HDFS) ;2:临时表的HDFS到目标Writer;3:删除临时表]");
+
         }
 
-        public void validate() {
-            readerOriginConfig.getNecessaryValue(Key.HIVE_SQL, HiveReaderErrorCode.SQL_NOT_FOUND_ERROR);
-            sqls = readerOriginConfig.getList(Key.HIVE_SQL, String.class);
 
-            if (sqls == null || sqls.size() == 0) {
-                throw DataXException.asDataXException(HiveReaderErrorCode.SQL_NOT_FOUND_ERROR,
+        private void validate() {
+
+            this.readerOriginConfig.getNecessaryValue(Key.DEFAULT_FS,
+                    HiveReaderErrorCode.DEFAULT_FS_NOT_FIND_ERROR);
+            List<String> sqls = this.readerOriginConfig.getList(Key.HIVE_SQL, String.class);
+            if (null == sqls || sqls.size() == 0) {
+                throw DataXException.asDataXException(
+                        HiveReaderErrorCode.SQL_NOT_FIND_ERROR,
                         "您未配置hive sql");
-            } else {
-                readerOriginConfig.getNecessaryValue(Key.JDBC_URL, HiveReaderErrorCode.REQUIRED_VALUE);
-                readerOriginConfig.getNecessaryValue(Key.USER, HiveReaderErrorCode.REQUIRED_VALUE);
-                readerOriginConfig.getNecessaryValue(Key.PASSWORD, HiveReaderErrorCode.REQUIRED_VALUE);
-
-                if (readerOriginConfig.getBool(Key.HAVE_KERBEROS, false)) {
-                    readerOriginConfig.getNecessaryValue(Key.KERBEROS_PRINCIPAL, HiveReaderErrorCode.REQUIRED_VALUE);
-                    readerOriginConfig.getNecessaryValue(Key.KERBEROS_KEYTAB_FILE_PATH, HiveReaderErrorCode.REQUIRED_VALUE);
-                }
+            }
+            //check Kerberos
+            Boolean haveKerberos = this.readerOriginConfig.getBool(Key.HAVE_KERBEROS, false);
+            if(haveKerberos) {
+                this.readerOriginConfig.getNecessaryValue(Key.KERBEROS_KEYTAB_FILE_PATH, HiveReaderErrorCode.REQUIRED_VALUE);
+                this.readerOriginConfig.getNecessaryValue(Key.KERBEROS_PRINCIPAL, HiveReaderErrorCode.REQUIRED_VALUE);
             }
         }
 
-        @Override
-        public void prepare() {
-            LOG.info(String.format("您即将执行的SQL条数为: [%s], 列表为: [%s]",
-                    this.sqls.size(),
-                    StringUtils.join(this.sqls, ";")));
-        }
 
         @Override
         public List<Configuration> split(int adviceNumber) {
+            //按照Hive  sql的个数 获取配置文件的个数
             LOG.info("split() begin...");
+            List<String> sqls = this.readerOriginConfig.getList(Key.HIVE_SQL, String.class);
             List<Configuration> readerSplitConfigs = new ArrayList<Configuration>();
-            // 自定义SQL部分同步通过切分sql条数实现split
-            List<List<String>> splitedSqls = this.splitSourceFiles(sqls, adviceNumber);
-            for (List<String> sqls : splitedSqls) {
-                Configuration splitedConfig = this.readerOriginConfig.clone();
-                splitedConfig.set(Key.HIVE_SQL, sqls);
+            Configuration splitedConfig = null;
+            for (String querySql : sqls) {
+                splitedConfig = this.readerOriginConfig.clone();
+                splitedConfig.set(Key.HIVE_SQL, querySql);
                 readerSplitConfigs.add(splitedConfig);
             }
             return readerSplitConfigs;
         }
 
-        private <T> List<List<T>> splitSourceFiles(final List<T> sourceList, int adviceNumber) {
-            List<List<T>> splitedList = new ArrayList<List<T>>();
-            int averageLength = sourceList.size() / adviceNumber;
-            averageLength = averageLength == 0 ? 1 : averageLength;
+        //全局post
+        @Override
+        public void post() {
+            LOG.info("任务执行完毕,hive reader post");
 
-            for (int begin = 0, end = 0; begin < sourceList.size(); begin = end) {
-                end = begin + averageLength;
-                if (end > sourceList.size()) {
-                    end = sourceList.size();
-                }
-                splitedList.add(sourceList.subList(begin, end));
-            }
-            return splitedList;
         }
 
         @Override
         public void destroy() {
 
         }
-
     }
 
+
     public static class Task extends Reader.Task {
+
         private static final Logger LOG = LoggerFactory
                 .getLogger(Task.class);
-        private static final boolean IS_DEBUG = LOG.isDebugEnabled();
-        protected final byte[] EMPTY_CHAR_ARRAY = new byte[0];
-
         private Configuration taskConfig;
-        private String basicMsg;
+        private String hiveSql;
+        private String tmpPath;
+        private String tableName;
+        private String tempDatabase;
+        private String tempHdfsLocation;
+        private String hive_cmd;
+        private String hive_sql_set;
+        private String fieldDelimiter;
+        private String nullFormat;
+        private String hive_fieldDelimiter;
+        private DFSUtil dfsUtil = null;
+        private HashSet<String> sourceFiles;
 
         @Override
         public void init() {
-            this.taskConfig = super.getPluginJobConf();
+        	this.tableName = hiveTableName();
+            //获取配置
+            this.taskConfig = super.getPluginJobConf();//获取job 分割后的每一个任务单独的配置文件
+            this.hiveSql = taskConfig.getString(Key.HIVE_SQL);//获取hive sql
+            this.tempDatabase = taskConfig.getString(Key.TEMP_DATABASE,Constant.TEMP_DATABASE_DEFAULT);
+            this.tempHdfsLocation = taskConfig.getString(Key.TEMP_DATABASE_HDFS_LOCATION,Constant.TEMP_DATABSE_HDFS_LOCATION_DEFAULT);
+            this.hive_cmd = taskConfig.getString(Key.HIVE_CMD,Constant.HIVE_CMD_DEFAULT);
+            this.hive_sql_set = taskConfig.getString(Key.HIVE_SQL_SET,Constant.HIVE_SQL_SET_DEFAULT);
+            //判断set语句的结尾是否是分号，不是给加一个
+            if (!this.hive_sql_set.trim().endsWith(";")) {
+            	this.hive_sql_set=this.hive_sql_set + ";";}
+            
+            this.fieldDelimiter = taskConfig.getString(Key.FIELDDELIMITER,Constant.FIELDDELIMITER_DEFAULT);
+            this.hive_fieldDelimiter = this.fieldDelimiter;
+                   
+            this.fieldDelimiter = StringEscapeUtils.unescapeJava(this.fieldDelimiter);            
+            this.taskConfig.set(Key.FIELDDELIMITER, this.fieldDelimiter);//设置hive 存储文件 hdfs默认的分隔符,传输时候会分隔
+            
+            this.nullFormat=taskConfig.getString(Key.NULL_FORMAT,Constant.NULL_FORMAT_DEFAULT);
+            this.taskConfig.set(Key.NULL_FORMAT,this.nullFormat);
+            //判断set语句的结尾是否是分号，不是给加一个
+            if (!this.tempHdfsLocation.trim().endsWith("/")) {
+            	this.tempHdfsLocation=this.tempHdfsLocation + "/";}
+            this.tmpPath = this.tempHdfsLocation + this.tableName;//创建临时Hive表 存储地址
+            LOG.info("配置分隔符后:" + this.taskConfig.toJSON());
+            this.dfsUtil = new DFSUtil(this.taskConfig);//初始化工具类
+
         }
+
 
         @Override
         public void prepare() {
+            //创建临时Hive表,指定存储地址
+
+            
+            String hiveQueryCmd = this.hive_sql_set+" use "+this.tempDatabase+"; create table " 
+            		+ this.tableName + " ROW FORMAT DELIMITED FIELDS TERMINATED BY '" +  this.hive_fieldDelimiter 
+            		+"' STORED AS TEXTFILE " 
+            		+ " as " + this.hiveSql;
+            LOG.info("hiveCmd ----> :" + hiveQueryCmd);
+
+            //执行脚本,创建临时表
+            if (!ShellUtil.exec(new String[]{this.hive_cmd, "-e", "\"" + hiveQueryCmd + " \""})) {
+                throw DataXException.asDataXException(
+                        HiveReaderErrorCode.SHELL_ERROR,
+                        "创建hive临时表脚本执行失败");
+            }
+
+            LOG.info("创建hive 临时表结束 end!!!");
+            LOG.info("prepare(), start to getAllFiles...");
+            List<String> path = new ArrayList<String>();
+            path.add(tmpPath);
+            this.sourceFiles = dfsUtil.getAllFiles(path, Constant.TEXT);
+            LOG.info(String.format("您即将读取的文件数为: [%s], 列表为: [%s]",
+                    this.sourceFiles.size(),
+                    StringUtils.join(this.sourceFiles, ",")));
         }
 
         @Override
         public void startRead(RecordSender recordSender) {
+            //读取临时hive表的hdfs文件
             LOG.info("read start");
-            List<String> querySqls = taskConfig.getList(Key.HIVE_SQL, String.class);
-            String user = taskConfig.getString(Key.USER);
-            String pass = taskConfig.getString(Key.PASSWORD);
-            String jdbcUrl = taskConfig.getString(Key.JDBC_URL);
+            for (String sourceFile : this.sourceFiles) {
+                LOG.info(String.format("reading file : [%s]", sourceFile));
 
-            basicMsg = String.format("jdbcUrl:[%s], taskId:[%s]", jdbcUrl, getTaskId());
-            PerfTrace.getInstance().addTaskDetails(getTaskId(), basicMsg);
-
-            Connection connection = DBUtil.getConnection(jdbcUrl, user, pass, taskConfig);
-            ResultSet rs = null;
-            try {
-                for (String sql : querySqls) {
-                    LOG.info("Begin to read record by Sql: [{}\n] {}.",
-                            sql, basicMsg);
-                    PerfRecord queryPerfRecord = new PerfRecord(getTaskGroupId(), getTaskId(), PerfRecord.PHASE.SQL_QUERY);
-                    queryPerfRecord.start();
-
-                    long rsNextUsedTime = 0;
-                    long lastTime = System.nanoTime();
-                    rs = DBUtil.query(connection, sql);
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnNumber = metaData.getColumnCount();
-                    while (rs.next()) {
-                        rsNextUsedTime += (System.nanoTime() - lastTime);
-                        transportOneRecord(recordSender, rs, metaData,
-                                columnNumber, "", getTaskPluginCollector());
-                        lastTime = System.nanoTime();
-                    }
-                    queryPerfRecord.end(rsNextUsedTime);
-                    LOG.info("Finished read record by Sql: [{}\n] {}.",
-                            sql, basicMsg);
+                //默认读取的是TEXT文件格式
+                InputStream inputStream = dfsUtil.getInputStream(sourceFile);
+                UnstructuredStorageReaderUtil.readFromStream(inputStream, sourceFile, this.taskConfig,
+                        recordSender, this.getTaskPluginCollector());
+                if (recordSender != null) {
+                    recordSender.flush();
                 }
-            } catch (Exception e) {
-                throw DataXException.asDataXException(HiveReaderErrorCode.SQL_EXECUTE_FAIL,
-                        "执行的SQL为: " + querySqls + " 具体错误信息为：" + e);
-            } finally {
-                DBUtil.closeDBResources(rs, null, connection);
             }
+            LOG.info("end read source files...");
+        }
+
+
+        //只是局部post  属于每个task
+        @Override
+        public void post() {
+            LOG.info("one task hive read post...");
+            deleteTmpTable();
+        }
+
+        private void deleteTmpTable() {
+
+            String hiveCmd =this.hive_sql_set+ " use "+this.tempDatabase+"; drop table " + this.tableName;
+            LOG.info("清空数据:hiveCmd ----> :" + hiveCmd);
+            //执行脚本,创建临时表 
+            if (!ShellUtil.exec(new String[]{this.hive_cmd,"-e", "\"" + hiveCmd + "\""})) {
+                throw DataXException.asDataXException(
+                        HiveReaderErrorCode.SHELL_ERROR,
+                        "删除hive临时表脚本执行失败");
+            }
+
         }
 
         @Override
         public void destroy() {
-
+            LOG.info("hive read destroy...");
         }
 
-        protected Record transportOneRecord(RecordSender recordSender, ResultSet rs,
-                                            ResultSetMetaData metaData, int columnNumber, String mandatoryEncoding,
-                                            TaskPluginCollector taskPluginCollector) {
-            Record record = buildRecord(recordSender, rs, metaData, columnNumber, mandatoryEncoding, taskPluginCollector);
-            recordSender.sendToWriter(record);
-            return record;
-        }
 
-        protected Record buildRecord(RecordSender recordSender, ResultSet rs, ResultSetMetaData metaData, int columnNumber, String mandatoryEncoding,
-                                     TaskPluginCollector taskPluginCollector) {
-            Record record = recordSender.createRecord();
+        //创建hive临时表名称
+        private String hiveTableName() {
 
-            try {
-                for (int i = 1; i <= columnNumber; i++) {
-                    switch (metaData.getColumnType(i)) {
+            StringBuilder str = new StringBuilder();
+            FastDateFormat fdf = FastDateFormat.getInstance("yyyyMMdd");
 
-                        case Types.CHAR:
-                        case Types.NCHAR:
-                        case Types.VARCHAR:
-                        case Types.LONGVARCHAR:
-                        case Types.NVARCHAR:
-                        case Types.LONGNVARCHAR:
-                            String rawData;
-                            if (StringUtils.isBlank(mandatoryEncoding)) {
-                                rawData = rs.getString(i);
-                            } else {
-                                rawData = new String((rs.getBytes(i) == null ? EMPTY_CHAR_ARRAY :
-                                        rs.getBytes(i)), mandatoryEncoding);
-                            }
-                            record.addColumn(new StringColumn(rawData));
-                            break;
+            str.append(Constant.TEMP_TABLE_NAME_PREFIX).append(fdf.format(new Date()))
+                    .append("_").append(UUID.randomUUID().toString().replaceAll("-",""));
 
-                        case Types.CLOB:
-                        case Types.NCLOB:
-                            record.addColumn(new StringColumn(rs.getString(i)));
-                            break;
-
-                        case Types.SMALLINT:
-                        case Types.TINYINT:
-                        case Types.INTEGER:
-                        case Types.BIGINT:
-                            record.addColumn(new LongColumn(rs.getString(i)));
-                            break;
-
-                        case Types.NUMERIC:
-                        case Types.DECIMAL:
-                            record.addColumn(new DoubleColumn(rs.getString(i)));
-                            break;
-
-                        case Types.FLOAT:
-                        case Types.REAL:
-                        case Types.DOUBLE:
-                            record.addColumn(new DoubleColumn(rs.getString(i)));
-                            break;
-
-                        case Types.TIME:
-                            record.addColumn(new DateColumn(rs.getTime(i)));
-                            break;
-
-                        // for mysql bug, see http://bugs.mysql.com/bug.php?id=35115
-                        case Types.DATE:
-                            if (metaData.getColumnTypeName(i).equalsIgnoreCase("year")) {
-                                record.addColumn(new LongColumn(rs.getInt(i)));
-                            } else {
-                                record.addColumn(new DateColumn(rs.getDate(i)));
-                            }
-                            break;
-
-                        case Types.TIMESTAMP:
-                            record.addColumn(new DateColumn(rs.getTimestamp(i)));
-                            break;
-
-                        case Types.BINARY:
-                        case Types.VARBINARY:
-                        case Types.BLOB:
-                        case Types.LONGVARBINARY:
-                            record.addColumn(new BytesColumn(rs.getBytes(i)));
-                            break;
-
-                        // warn: bit(1) -> Types.BIT 可使用BoolColumn
-                        // warn: bit(>1) -> Types.VARBINARY 可使用BytesColumn
-                        case Types.BOOLEAN:
-                        case Types.BIT:
-                            record.addColumn(new BoolColumn(rs.getBoolean(i)));
-                            break;
-
-                        // 针对hive中特有的复杂类型,转为string类型输出
-                        case Types.ARRAY:
-                        case Types.STRUCT:
-                        case Types.JAVA_OBJECT:
-                        case Types.OTHER:
-                            String arrStr = (String) rs.getObject(i);
-                            record.addColumn(new StringColumn(arrStr));
-                            break;
-
-                        case Types.NULL:
-                            String stringData = null;
-                            if (rs.getObject(i) != null) {
-                                stringData = rs.getObject(i).toString();
-                            }
-                            record.addColumn(new StringColumn(stringData));
-                            break;
-
-                        default:
-                            throw DataXException
-                                    .asDataXException(
-                                            HiveReaderErrorCode.UNSUPPORTED_TYPE,
-                                            String.format(
-                                                    "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库读取这种字段类型. 字段名:[%s], 字段名称:[%s], 字段Java类型:[%s]. 请尝试使用数据库函数将其转换datax支持的类型 或者不同步该字段 .",
-                                                    metaData.getColumnName(i),
-                                                    metaData.getColumnType(i),
-                                                    metaData.getColumnClassName(i)));
-                    }
-                }
-            } catch (Exception e) {
-                if (IS_DEBUG) {
-                    LOG.debug("read data " + record.toString()
-                            + " occur exception:", e);
-                }
-                //TODO 这里识别为脏数据靠谱吗？
-                taskPluginCollector.collectDirtyRecord(record, e);
-                if (e instanceof DataXException) {
-                    throw (DataXException) e;
-                }
-            }
-            return record;
+            return str.toString().toLowerCase();
         }
 
     }
+
+
 }

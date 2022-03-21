@@ -1,23 +1,35 @@
 package com.alibaba.datax.plugin.reader.hivereader;
 
-public final class Key {
-
+/**
+ * @author dean 2019/10/25.
+ * @version v1.1
+ */
+public class Key {
     /**
-     * 此处声明插件用到的需要插件使用者提供的配置项
-     */
+     * 1.必选:hiveSql,defaultFS
+     * 2.可选(有缺省值):
+     * 			tempDatabase(default)
+     *          tempHdfsLocation(/tmp/hive/)
+     *          hive_cmd(hive)
+     *          fieldDelimiter(\u0001)
+     * 3.可选(无缺省值):hive_sql_set
+     * */
+    
 
-    /**
-     * hive自定义SQL语句，运用于部分表数据同步。
-     * 必传属性,数组类型。
-     */
-    public final static String HIVE_SQL = "sqls";
-    public final static String JDBC_URL = "jdbcUrl";
-    public final static String USER = "user";
-    public final static String PASSWORD = "password";
-
-    /**
-     * kerberos auth相关参数
-     */
+    public final static String DEFAULT_FS = "defaultFS";
+    //reader执行的hiveSql语句
+    public final static String HIVE_SQL = "hiveSql";
+    // 临时表所在的数据库名称
+    public final static String TEMP_DATABASE = "tempDatabase";
+    //临时标存放的HDFS目录
+    public final static String TEMP_DATABASE_HDFS_LOCATION = "tempDatabasePath";
+    //hive -e命令
+    public final static String HIVE_CMD = "hive_cmd";
+    public final static String HIVE_SQL_SET = "hive_sql_set";
+    // 存储文件 hdfs默认的分隔符
+    public final static String FIELDDELIMITER="fieldDelimiter";
+    public static final String NULL_FORMAT = "nullFormat";
+    public static final String HADOOP_CONFIG = "hadoopConfig";
     public static final String HAVE_KERBEROS = "haveKerberos";
     public static final String KERBEROS_KEYTAB_FILE_PATH = "kerberosKeytabFilePath";
     public static final String KERBEROS_PRINCIPAL = "kerberosPrincipal";
