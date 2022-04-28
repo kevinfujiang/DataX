@@ -2,7 +2,10 @@
     "name": "mysqlreader",
     "parameter": {
         "username": "",
+        "targetTable": "",
         "password": "",
+        "fields": "",
+        "dtType": "",
         "column": [],
         "connection": [
             {

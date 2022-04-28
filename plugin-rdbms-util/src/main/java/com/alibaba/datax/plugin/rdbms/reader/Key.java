@@ -14,6 +14,12 @@ public final class Key {
     
     public final static String MANDATORY_ENCODING = "mandatoryEncoding";
 
+    public final static String FIELDS = "fields";
+
+    public final static String DTTYPE = "dtType";
+
+    public final static String TARGETTABLE = "targetTable";
+
     // 是数组配置
     public final static String COLUMN = "column";
     
