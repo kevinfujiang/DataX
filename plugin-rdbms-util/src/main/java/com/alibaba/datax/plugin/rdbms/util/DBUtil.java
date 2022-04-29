@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
 public final class DBUtil {
     private static final Logger LOG = LoggerFactory.getLogger(DBUtil.class);
 
+    private static final Integer one = 1;
+
     private static final ThreadLocal<ExecutorService> rsExecutors = new ThreadLocal<ExecutorService>() {
         @Override
         protected ExecutorService initialValue() {
@@ -501,13 +503,14 @@ public final class DBUtil {
     }
 
     public static List<String> getTableColumns(DataBaseType dataBaseType,
-                                               String jdbcUrl, String user, String pass, String tableName, Configuration originalConfig) {
+                                               String jdbcUrl, String user, String pass, String tableName,
+                                               Integer createTable,String field) {
         Connection conn = getConnection(dataBaseType, jdbcUrl, user, pass);
-        return getTableColumnsByConn(dataBaseType, conn, tableName, "jdbcUrl:"+jdbcUrl,originalConfig);
+        return getTableColumnsByConn(dataBaseType, conn, tableName, "jdbcUrl:"+jdbcUrl,createTable,field);
     }
 
     public static List<String> getTableColumnsByConn(DataBaseType dataBaseType, Connection conn, String tableName, String basicMsg,
-                                                     Configuration originalConfig) {
+                                                     Integer createTable, String field) {
         List<String> columns = new ArrayList<String>();
         Statement statement = null;
         ResultSet rs = null;
@@ -515,12 +518,7 @@ public final class DBUtil {
         try {
             statement = conn.createStatement();
             //返回建表语句
-
-            Integer createTable = originalConfig.getInt(Key.CREATETABLE);
-        if (createTable == 1) {
-            List<String> fields = originalConfig.getList(Key.FIELDS,
-                    String.class);
-            String field = fields.stream().map(String::valueOf).collect(Collectors.joining(","));
+        if (createTable == one.intValue()) {
             LOG.info("writer field: {}", field);
             LOG.info("writer tableName: {}", tableName);
             String tableSql = buildTableSql(dataBaseType,tableName,field);
