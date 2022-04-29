@@ -16,9 +16,7 @@ public final class Key {
 
     public final static String FIELDS = "fields";
 
-    public final static String DTTYPE = "dtType";
-
-    public final static String TARGETTABLE = "targetTable";
+    public final static String CREATETABLE = "createTable";
 
     // 是数组配置
     public final static String COLUMN = "column";

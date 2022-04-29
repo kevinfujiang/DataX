@@ -133,37 +133,11 @@ public final class OriginalConfPretreatmentUtil {
         originalConfig.set(Constant.TABLE_NUMBER_MARK, tableNum);
     }
 
-    public static Connection getConn(Configuration originalConfig) {
-
-        String username = originalConfig.getString(Key.USERNAME);
-        String password = originalConfig.getString(Key.PASSWORD);
-        String jdbcUrl = originalConfig.getString(String.format(
-                "%s[0].%s", Constant.CONN_MARK, Key.JDBC_URL));
-        Connection connection = DBUtil.getConnection(DATABASE_TYPE, jdbcUrl, username, password);
-        return connection;
-
-    }
-
     private static void dealColumnConf(Configuration originalConfig) {
         boolean isTableMode = originalConfig.getBool(Constant.IS_TABLE_MODE);
 
         List<String> userConfiguredColumns = originalConfig.getList(Key.COLUMN,
                 String.class);
-
-        try {
-            Statement statement = getConn(originalConfig).createStatement();
-            String targetTable = (String) originalConfig.get("targetTable");
-            String dtType = (String) originalConfig.get("dtType");
-            List<String> fields = originalConfig.getList(Key.FIELDS,
-                    String.class);
-            String field = fields.stream().map(String::valueOf).collect(Collectors.joining(","));
-
-            String tableSql = buildTableSql(dtType,targetTable,field);
-            LOG.info("tableSql: {}",tableSql);
-            statement.execute(tableSql);      //执行即可
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
 
         if (isTableMode) {
             if (null == userConfiguredColumns
@@ -190,7 +164,7 @@ public final class OriginalConfPretreatmentUtil {
 
                     List<String> allColumns = DBUtil.getTableColumns(
                             DATABASE_TYPE, jdbcUrl, username, password,
-                            tableName);
+                            tableName,originalConfig);
                     LOG.info("table:[{}] has columns:[{}].",
                             tableName, StringUtils.join(allColumns, ","));
                     // warn:注意mysql表名区分大小写
@@ -253,30 +227,6 @@ public final class OriginalConfPretreatmentUtil {
             }
         }
 
-    }
-
-    public static String buildTableSql(String dtType,String table,String field) {
-
-        //另写方法，返回sql
-        //判断表是否存在(前端传映射关系，json文件修改信息，datax增加参数)
-        /*if (数据源){
-            //拼接是否存在的建表语句
-        }*/
-        String sql = null;
-
-        if (dtType.equals(DataBaseType.MySql.getTypeName().toUpperCase())) {
-            sql = String.format("create table %s (%s)",
-                    table,field);
-            return sql;
-        }else if (dtType.equals(DataBaseType.ClickHouse.getTypeName().toUpperCase())){
-            sql = "create table info"+table+"("+field+")";
-            return sql;
-        }else if (dtType.equals(DataBaseType.PostgreSQL.getTypeName().toUpperCase())){
-            sql = "CREATE TABLE "+table+"("+field+")";
-            return sql;
-        }
-
-        return null;
     }
 
     private static boolean recognizeTableOrQuerySqlMode(
