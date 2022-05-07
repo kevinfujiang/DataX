@@ -35,6 +35,10 @@ public class UnstructuredStorageWriterUtil {
     private static final Logger LOG = LoggerFactory
             .getLogger(UnstructuredStorageWriterUtil.class);
 
+    private static final int NAME_FORMAT_DATE = 0;
+
+    private static final int NAME_FORMAT_DATE_TIMESTAMP = 1;
+
     /**
      * check parameter: writeMode, encoding, compress, filedDelimiter
      * */
@@ -126,13 +130,19 @@ public class UnstructuredStorageWriterUtil {
         List<Configuration> writerSplitConfigs = new ArrayList<Configuration>();
         String filePrefix = writerSliceConfig.getString(Key.FILE_NAME);
         String suffix = writerSliceConfig.getString(Key.SUFFIX);
+        Integer nameFormat = writerSliceConfig.getInt(Key.NAME_FORMAT);
 
         for (int i = 0; i < mandatoryNumber; i++) {
             // handle same file name
             Configuration splitedTaskConfig = writerSliceConfig.clone();
             String now = new SimpleDateFormat("yyyyMMdd").format(new Date());
-            String fullFileName = String.format("%s__%s", filePrefix, now);
-            String postFullFileName = recursionFileFullName(allFileExists, fullFileName, fullFileName, suffix, 1);
+            String fullFileName = String.format("%s_%s", filePrefix, now);
+            String postFullFileName = fullFileName;
+            if (NAME_FORMAT_DATE == nameFormat) {
+                postFullFileName = recursionFileFullName(allFileExists, fullFileName, fullFileName, suffix, 1);
+            } else if (NAME_FORMAT_DATE_TIMESTAMP == nameFormat) {
+                postFullFileName = fullFileName.concat("_").concat(String.valueOf(System.currentTimeMillis()));
+            }
 
             allFileExists.add(postFullFileName);
             splitedTaskConfig.set(Key.FILE_NAME, postFullFileName);
