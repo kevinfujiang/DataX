@@ -512,7 +512,6 @@ public final class DBUtil {
         String queryColumnSql = null;
         try {
             statement = conn.createStatement();
-            //返回建表语句
             queryColumnSql = String.format("select * from %s where 1=2",
                     tableName);
             rs = statement.executeQuery(queryColumnSql);
