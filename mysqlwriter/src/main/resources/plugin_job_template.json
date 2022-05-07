@@ -3,8 +3,6 @@
     "parameter": {
         "username": "",
         "password": "",
-        "fields": "",
-        "createTable": "",
         "writeMode": "",
         "column": [],
         "session": [],

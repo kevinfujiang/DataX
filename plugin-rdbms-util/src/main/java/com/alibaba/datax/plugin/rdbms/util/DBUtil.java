@@ -18,7 +18,6 @@ import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 public final class DBUtil {
     private static final Logger LOG = LoggerFactory.getLogger(DBUtil.class);
@@ -501,13 +500,12 @@ public final class DBUtil {
     }
 
     public static List<String> getTableColumns(DataBaseType dataBaseType,
-                                               String jdbcUrl, String user, String pass, String tableName, Configuration originalConfig) {
+                                               String jdbcUrl, String user, String pass, String tableName) {
         Connection conn = getConnection(dataBaseType, jdbcUrl, user, pass);
-        return getTableColumnsByConn(dataBaseType, conn, tableName, "jdbcUrl:"+jdbcUrl,originalConfig);
+        return getTableColumnsByConn(dataBaseType, conn, tableName, "jdbcUrl:"+jdbcUrl);
     }
 
-    public static List<String> getTableColumnsByConn(DataBaseType dataBaseType, Connection conn, String tableName, String basicMsg,
-                                                     Configuration originalConfig) {
+    public static List<String> getTableColumnsByConn(DataBaseType dataBaseType, Connection conn, String tableName, String basicMsg) {
         List<String> columns = new ArrayList<String>();
         Statement statement = null;
         ResultSet rs = null;
@@ -515,20 +513,6 @@ public final class DBUtil {
         try {
             statement = conn.createStatement();
             //返回建表语句
-
-            Integer createTable = originalConfig.getInt(Key.CREATETABLE);
-        if (createTable == 1) {
-            List<String> fields = originalConfig.getList(Key.FIELDS,
-                    String.class);
-            String field = fields.stream().map(String::valueOf).collect(Collectors.joining(","));
-            LOG.info("writer field: {}", field);
-            LOG.info("writer tableName: {}", tableName);
-            String tableSql = buildTableSql(dataBaseType,tableName,field);
-            if (StringUtils.isNotBlank(tableSql)){
-                statement.execute(tableSql);
-            }
-        }
-
             queryColumnSql = String.format("select * from %s where 1=2",
                     tableName);
             rs = statement.executeQuery(queryColumnSql);
@@ -544,35 +528,6 @@ public final class DBUtil {
         }
 
         return columns;
-    }
-
-    public static String buildTableSql(DataBaseType dataBaseType,String tableName,String field) {
-
-        /*另写方法，返回sql
-        判断表是否存在(前端传映射关系，json文件修改信息，datax增加参数)
-        if (数据源){
-            //拼接是否存在的建表语句
-        }*/
-        String sql = null;
-
-        if (dataBaseType.equals(DataBaseType.MySql) || dataBaseType.equals(DataBaseType.SQLServer)) {
-            sql = String.format("create table %s (%s)",
-                    tableName,field);
-            return sql;
-        }else if (dataBaseType.equals(DataBaseType.ClickHouse)){
-            sql = "create table info"+tableName+"("+field+")";
-            return sql;
-        }else if (dataBaseType.equals(DataBaseType.PostgreSQL)){
-            sql = "CREATE TABLE "+tableName+"("+field+")";
-            return sql;
-        }
-        else if (dataBaseType.equals(DataBaseType.Oracle)){
-            sql = String.format("create table %s (%s)",
-                    tableName.toUpperCase(),field);
-            return sql;
-        }
-
-        return null;
     }
 
     /**
