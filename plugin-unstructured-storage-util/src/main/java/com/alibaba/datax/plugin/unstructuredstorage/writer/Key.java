@@ -35,4 +35,7 @@ public class Key {
     
     // writer file type suffix, like .txt  .csv
     public static final String SUFFIX = "suffix";
+
+    // writer file name format, 0: date; 1: date and timestamp
+    public static final String NAME_FORMAT = "nameFormat";
 }

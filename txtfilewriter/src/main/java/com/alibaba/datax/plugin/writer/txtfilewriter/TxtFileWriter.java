@@ -18,12 +18,8 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * Created by haiwei.luo on 14-9-17.
@@ -31,6 +27,10 @@ import java.util.UUID;
 public class TxtFileWriter extends Writer {
     public static class Job extends Writer.Job {
         private static final Logger LOG = LoggerFactory.getLogger(Job.class);
+
+        private static final int NAME_FORMAT_DATE = 0;
+
+        private static final int NAME_FORMAT_DATE_TIMESTAMP = 1;
 
         private Configuration writerSliceConfig = null;
 
@@ -214,6 +214,8 @@ public class TxtFileWriter extends Writer {
             List<Configuration> writerSplitConfigs = new ArrayList<Configuration>();
             String filePrefix = this.writerSliceConfig
                     .getString(com.alibaba.datax.plugin.unstructuredstorage.writer.Key.FILE_NAME);
+            String suffix = this.writerSliceConfig.getString(com.alibaba.datax.plugin.unstructuredstorage.writer.Key.SUFFIX);
+            Integer nameFormat = writerSliceConfig.getInt(com.alibaba.datax.plugin.unstructuredstorage.writer.Key.NAME_FORMAT);
 
             Set<String> allFiles = new HashSet<String>();
             String path = null;
@@ -227,29 +229,29 @@ public class TxtFileWriter extends Writer {
                         String.format("您没有权限查看目录 : [%s]", path));
             }
 
-            String fileSuffix;
             for (int i = 0; i < mandatoryNumber; i++) {
                 // handle same file name
 
                 Configuration splitedTaskConfig = this.writerSliceConfig
                         .clone();
 
-                String fullFileName = null;
-                fileSuffix = UUID.randomUUID().toString().replace('-', '_');
-                fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
-                while (allFiles.contains(fullFileName)) {
-                    fileSuffix = UUID.randomUUID().toString().replace('-', '_');
-                    fullFileName = String.format("%s__%s", filePrefix,
-                            fileSuffix);
+                String now = new SimpleDateFormat("yyyyMMdd").format(new Date());
+
+                String fullFileName = String.format("%s_%s", filePrefix, now);
+                String postFullFileName = fullFileName;
+                if (NAME_FORMAT_DATE == nameFormat) {
+                    postFullFileName = recursionFileFullName(allFiles, fullFileName, fullFileName, suffix, 1);
+                } else if (NAME_FORMAT_DATE_TIMESTAMP == nameFormat) {
+                    postFullFileName = fullFileName.concat("_").concat(String.valueOf(System.currentTimeMillis()));
                 }
-                allFiles.add(fullFileName);
+                allFiles.add(postFullFileName);
 
                 splitedTaskConfig
                         .set(com.alibaba.datax.plugin.unstructuredstorage.writer.Key.FILE_NAME,
-                                fullFileName);
+                                postFullFileName.concat(suffix));
 
-                LOG.info(String.format("splited write file name:[%s]",
-                        fullFileName));
+                LOG.info(String.format("split write file name:[%s]",
+                        postFullFileName));
 
                 writerSplitConfigs.add(splitedTaskConfig);
             }
@@ -257,6 +259,20 @@ public class TxtFileWriter extends Writer {
             return writerSplitConfigs;
         }
 
+    }
+
+    private static String recursionFileFullName(Set<String> allFileExists, String preFileName, String postFileName, String suffix, int num) {
+        if (allFileExists.contains(postFileName.concat(suffix))) {
+            if (num > 1) {
+                String str = postFileName.substring(0, preFileName.length());
+                postFileName = str + "_" + num;
+            } else {
+                postFileName = postFileName + "_" + num;
+            }
+        } else {
+            return postFileName;
+        }
+        return recursionFileFullName(allFileExists, preFileName, postFileName, suffix, num + 1);
     }
 
     public static class Task extends Writer.Task {
