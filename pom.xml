@@ -18,7 +18,7 @@
 
     <properties>
         <jdk-version>1.8</jdk-version>
-        <datax-project-version>0.0.1-SNAPSHOT</datax-project-version>
+        <datax-project-version>1.0.0-SNAPSHOT</datax-project-version>
         <commons-lang3-version>3.3.2</commons-lang3-version>
         <commons-configuration-version>1.10</commons-configuration-version>
         <commons-cli-version>1.2</commons-cli-version>
