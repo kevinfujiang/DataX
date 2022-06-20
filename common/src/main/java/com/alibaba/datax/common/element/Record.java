@@ -1,5 +1,7 @@
 package com.alibaba.datax.common.element;
 
+import java.util.Map;
+
 /**
  * Created by jingxing on 14-8-24.
  */
@@ -20,4 +22,7 @@ public interface Record {
 
 	public int getMemorySize();
 
+	public void setMeta(Map<String, String> meta);
+
+	public Map<String, String> getMeta();
 }

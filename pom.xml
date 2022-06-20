@@ -22,7 +22,7 @@
         <commons-lang3-version>3.3.2</commons-lang3-version>
         <commons-configuration-version>1.10</commons-configuration-version>
         <commons-cli-version>1.2</commons-cli-version>
-        <fastjson-version>1.1.46.sec01</fastjson-version>
+        <fastjson-version>1.2.49</fastjson-version>
         <guava-version>16.0.1</guava-version>
         <diamond.version>3.7.2.1-SNAPSHOT</diamond.version>
 
@@ -30,7 +30,7 @@
         <slf4j-api-version>1.7.10</slf4j-api-version>
         <logback-classic-version>1.0.13</logback-classic-version>
         <commons-io-version>2.11.0</commons-io-version>
-        <junit-version>4.11</junit-version>
+        <junit-version>4.13.1</junit-version>
         <tddl.version>5.1.22-1</tddl.version>
         <swift-version>1.0.0</swift-version>
 
@@ -189,6 +189,17 @@
                 <artifactId>mockito-all</artifactId>
                 <version>1.9.5</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>2.17.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>2.17.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

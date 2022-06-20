@@ -376,14 +376,14 @@ public class StorageReaderUtil
         }
     }
 
-    public static void validateCompress(Configuration readerConfiguration)
-    {
-        String compress = readerConfiguration.getUnnecessaryValue(Key.COMPRESS, "").toLowerCase();
-        if ("gzip".equals(compress)) {
-            compress = "gz";
-        }
-        readerConfiguration.set(Key.COMPRESS, compress);
-    }
+//    public static void validateCompress(Configuration readerConfiguration)
+//    {
+//        String compress = readerConfiguration.getUnnecessaryValue(Key.COMPRESS, "").toLowerCase();
+//        if ("gzip".equals(compress)) {
+//            compress = "gz";
+//        }
+//        readerConfiguration.set(Key.COMPRESS, compress);
+//    }
 
     public static void validateFieldDelimiter(Configuration readerConfiguration)
     {

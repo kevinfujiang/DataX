@@ -134,6 +134,12 @@ public class DoubleColumn extends Column {
 	}
 
 	@Override
+	public Date asDate(String dateFormat) {
+		throw DataXException.asDataXException(
+				CommonErrorCode.CONVERT_NOT_SUPPORT, "Double类型无法转为Date类型 .");
+	}
+
+	@Override
 	public byte[] asBytes() {
 		throw DataXException.asDataXException(
 				CommonErrorCode.CONVERT_NOT_SUPPORT, "Double类型无法转为Bytes类型 .");

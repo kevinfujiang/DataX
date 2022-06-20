@@ -127,6 +127,11 @@ public class LongColumn extends Column {
 	}
 
 	@Override
+	public Date asDate(String dateFormat) {
+		return this.asDate();
+	}
+
+	@Override
 	public byte[] asBytes() {
 		throw DataXException.asDataXException(
 				CommonErrorCode.CONVERT_NOT_SUPPORT, "Long类型不能转为Bytes .");
