@@ -18,7 +18,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>hivereader-0.0.1-SNAPSHOT.jar</include>
+                <include>hivereader-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>plugin/reader/hivereader</outputDirectory>
         </fileSet>

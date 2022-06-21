@@ -18,7 +18,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>streamwriter-0.0.1-SNAPSHOT.jar</include>
+                <include>streamwriter-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>plugin/writer/streamwriter</outputDirectory>
         </fileSet>

@@ -19,7 +19,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>mysqlreader-0.0.1-SNAPSHOT.jar</include>
+                <include>mysqlreader-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>plugin/reader/mysqlreader</outputDirectory>
         </fileSet>

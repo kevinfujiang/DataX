@@ -19,7 +19,7 @@
 		<fileSet>
 			<directory>target/</directory>
 			<includes>
-				<include>hbase20xsqlwriter-0.0.1-SNAPSHOT.jar</include>
+				<include>hbase20xsqlwriter-1.0.0-SNAPSHOT.jar</include>
 			</includes>
 			<outputDirectory>plugin/writer/hbase20xsqlwriter</outputDirectory>
 		</fileSet>

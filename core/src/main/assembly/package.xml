@@ -41,7 +41,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>datax-core-0.0.1-SNAPSHOT.jar</include>
+                <include>datax-core-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>/lib</outputDirectory>
         </fileSet>

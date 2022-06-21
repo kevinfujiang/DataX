@@ -19,7 +19,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>tsdbwriter-0.0.1-SNAPSHOT.jar</include>
+                <include>tsdbwriter-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>plugin/writer/tsdbwriter</outputDirectory>
         </fileSet>
