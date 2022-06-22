@@ -100,9 +100,7 @@
 <!--        <module>adbpgwriter</module>-->
 <!--        <module>gdbwriter</module>-->
 <!--        <module>cassandrawriter</module>-->
-	<!--
         <module>clickhousewriter</module>
-	-->
         <!-- common support module -->
 <!--        <module>hbase20xsqlreader</module>-->
 <!--        <module>hbase20xsqlwriter</module>-->
