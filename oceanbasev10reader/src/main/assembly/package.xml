@@ -19,7 +19,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>oceanbasev10reader-0.0.1-SNAPSHOT.jar</include>
+                <include>oceanbasev10reader-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>plugin/reader/oceanbasev10reader</outputDirectory>
         </fileSet>

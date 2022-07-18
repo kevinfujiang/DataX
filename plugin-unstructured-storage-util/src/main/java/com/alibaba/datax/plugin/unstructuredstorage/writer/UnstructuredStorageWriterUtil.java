@@ -3,11 +3,7 @@ package com.alibaba.datax.plugin.unstructuredstorage.writer;
 import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import com.alibaba.datax.common.element.BytesColumn;
 import org.apache.commons.codec.binary.Base64;
@@ -36,6 +32,10 @@ public class UnstructuredStorageWriterUtil {
 
     private static final Logger LOG = LoggerFactory
             .getLogger(UnstructuredStorageWriterUtil.class);
+
+    private static final int NAME_FORMAT_DATE = 0;
+
+    private static final int NAME_FORMAT_DATE_TIMESTAMP = 1;
 
     /**
      * check parameter: writeMode, encoding, compress, filedDelimiter
@@ -113,30 +113,46 @@ public class UnstructuredStorageWriterUtil {
     public static List<Configuration> split(Configuration writerSliceConfig,
                                             Set<String> originAllFileExists, int mandatoryNumber) {
         LOG.info("begin do split...");
-        Set<String> allFileExists = new HashSet<String>();
-        allFileExists.addAll(originAllFileExists);
+        Set<String> allFileExists = new HashSet<>(originAllFileExists);
         List<Configuration> writerSplitConfigs = new ArrayList<Configuration>();
         String filePrefix = writerSliceConfig.getString(Key.FILE_NAME);
+        String suffix = writerSliceConfig.getString(Key.SUFFIX);
+        Integer nameFormat = writerSliceConfig.getInt(Key.NAME_FORMAT);
 
-        String fileSuffix;
         for (int i = 0; i < mandatoryNumber; i++) {
             // handle same file name
             Configuration splitedTaskConfig = writerSliceConfig.clone();
-            String fullFileName = null;
-            fileSuffix = UUID.randomUUID().toString().replace('-', '_');
-            fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
-            while (allFileExists.contains(fullFileName)) {
-                fileSuffix = UUID.randomUUID().toString().replace('-', '_');
-                fullFileName = String.format("%s__%s", filePrefix, fileSuffix);
+            String now = new SimpleDateFormat("yyyyMMdd").format(new Date());
+            String fullFileName = String.format("%s_%s", filePrefix, now);
+            String postFullFileName = fullFileName;
+            if (NAME_FORMAT_DATE == nameFormat) {
+                postFullFileName = recursionFileFullName(allFileExists, fullFileName, fullFileName, suffix, 1);
+            } else if (NAME_FORMAT_DATE_TIMESTAMP == nameFormat) {
+                postFullFileName = fullFileName.concat("_").concat(String.valueOf(System.currentTimeMillis()));
             }
-            allFileExists.add(fullFileName);
-            splitedTaskConfig.set(Key.FILE_NAME, fullFileName);
+
+            allFileExists.add(postFullFileName);
+            splitedTaskConfig.set(Key.FILE_NAME, postFullFileName);
             LOG.info(String
-                    .format("splited write file name:[%s]", fullFileName));
+                    .format("split write file name:[%s]", postFullFileName));
             writerSplitConfigs.add(splitedTaskConfig);
         }
         LOG.info("end do split.");
         return writerSplitConfigs;
+    }
+
+    private static String recursionFileFullName(Set<String> allFileExists, String preFileName, String postFileName, String suffix, int num) {
+        if (allFileExists.contains(postFileName.concat(suffix))) {
+            if (num > 1) {
+                String str = postFileName.substring(0, preFileName.length());
+                postFileName = str + "_" + num;
+            } else {
+                postFileName = postFileName + "_" + num;
+            }
+        } else {
+            return postFileName;
+        }
+        return recursionFileFullName(allFileExists, preFileName, postFileName, suffix, num + 1);
     }
 
     public static String buildFilePath(String path, String fileName,

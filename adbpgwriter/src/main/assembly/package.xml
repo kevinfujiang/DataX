@@ -19,7 +19,7 @@
 		<fileSet>
 			<directory>target/</directory>
 			<includes>
-				<include>adbpgwriter-0.0.1-SNAPSHOT.jar</include>
+				<include>adbpgwriter-1.0.0-SNAPSHOT.jar</include>
 			</includes>
 			<outputDirectory>plugin/writer/adbpgwriter</outputDirectory>
 		</fileSet>

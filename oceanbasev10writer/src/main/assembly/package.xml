@@ -19,7 +19,7 @@
         <fileSet>
             <directory>target/</directory>
             <includes>
-                <include>oceanbasev10writer-0.0.1-SNAPSHOT.jar</include>
+                <include>oceanbasev10writer-1.0.0-SNAPSHOT.jar</include>
             </includes>
             <outputDirectory>plugin/writer/oceanbasev10writer</outputDirectory>
         </fileSet>
