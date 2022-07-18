@@ -3,6 +3,7 @@
   "parameter": {
     "path": [],
     "header": false,
-    "skipRows": 0
+    "skipRows": 0,
+    "ignoreColumns":[2,5]
   }
 }
