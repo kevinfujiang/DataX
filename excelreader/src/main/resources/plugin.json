@@ -1,0 +1,6 @@
+{
+  "name": "excelreader",
+  "class": "com.alibaba.datax.plugin.reader.excelreader.ExcelReader",
+  "description": "Retrieve data from Microsoft Excel Application",
+  "developer": "kevin"
+}

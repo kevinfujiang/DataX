@@ -39,6 +39,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
         <mysql.driver.version>5.1.47</mysql.driver.version>
+        <poi.version>5.2.2</poi.version>
     </properties>
 
     <modules>
@@ -71,6 +72,7 @@
         <module>cassandrareader</module>
         <module>gdbreader</module>
         <module>oceanbasev10reader</module>
+        <module>excelreader</module>
 
         <!-- writer -->
         <module>streamwriter</module>
